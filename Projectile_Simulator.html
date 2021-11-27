@@ -1,0 +1,178 @@
+<html>
+<head>
+    <title>
+        Projectile Motion Simulator
+    </title>
+    <style>
+        input{
+            height:10px;
+        }
+        #angle,#speed,#scale,#animation{
+            width: 500px;
+        }
+        #launch{
+            width: 60px;
+            height: 20px;
+        }
+        #canvas{
+            border:2px solid rgb(0, 140, 255);
+            background-color:papayawhip;
+        }
+        #canvasDistance{
+            padding-left:1300px;
+        }
+        #note{
+            width:1300;
+            font:20px serif;
+            text-align:justify;
+        }
+    </style>
+</head>
+<body>
+ <input type="range" min="0" max="90" step="1" id="angle" value=45> 
+ <label id="angle_label" for="angle">Projection Angle = 45°</label>
+ <br>
+ <input type="range" min="0" max="1000" step="1" id="speed" value=50> 
+ <label id="speed_label" for="speed">Initial Velocity = 50 m/sec</label>
+ <br>
+ <input type="range" min="0.1" max="100" step="0.1" id="animation" value=1> 
+ <label id="animation_label" for="animation">Animation Speed = 1</label>
+ <br>
+ <input type="range" min="0.01" max="1000" step="0.01" id="scale" value=5> 
+ <label id="scale_label" for="scale">Scaling = 5</label>
+ <br>
+ <input type="button" id="launch" value="Launch">
+ <br>
+ <br>
+ <canvas id="canvas" width="1300" height="650">Your browser does not support canvas</canvas> 
+ <label id="canvasRange">260 m</label>  
+ <br>
+ <p id="note"><strong>Hint:</strong> You can increase the scaling bar to its maximum (1000) in case of very low initial velocities (near 1 m/sec) to see the projectile path enlarged and spread over the simulation area. In case of very high velocities (near 1000 m/sec), you can decrease the scaling bar to its lowest value (0.01) to see the projectile path inside the simulation area. You can change the animation speed bar to speed up or slow down the simulation. This will not affect the real (physical) total trip time calculated after the simulation ends. </p>
+</body>
+<script>
+    var canvas=document.getElementById("canvas");
+    var drawing=canvas.getContext("2d");
+    var T=0; //initial time 
+    var X0=0;//
+    var Y0=0;//
+    var X=X0;//intial value of the coordinate X that will later change with time
+    var Y=Y0;//intial value of the coordinate Y that will later change with time
+    var angle=document.getElementById("angle"); //projection angle
+    var speed=document.getElementById("speed");//initial velocity of projection
+    var scale=document.getElementById("scale");//scale of canvas
+    var inputs=document.getElementsByTagName('input');
+    for(var input of inputs){
+        input.addEventListener("change",updateLabels);
+    }
+    function updateLabels(){
+        var scaledCanvasRange=canvas.width/scale.value;
+        document.getElementById("angle_label").innerHTML=`Projection Angle = ${angle.value}°`;
+        document.getElementById("speed_label").innerHTML=`Initial Velocity = ${speed.value} m/sec`;
+        document.getElementById("animation_label").innerHTML=`Animation Speed = ${animation.value}`;
+        document.getElementById("canvasRange").innerHTML= `${scaledCanvasRange.toFixed(2)} m`;
+        document.getElementById("scale_label").innerHTML=`Scale = ${scale.value} `;
+    }
+    var g=9.8;// gravitational acceleration of earth
+    var run=false;
+    var finished=false;
+    var launch= document.getElementById("launch");
+    launch.addEventListener("click",toggle);
+
+    var oldTimeStamp=0;
+    var secondsPassed=0;
+    var animationSpeed= document.getElementById("animation");//a scaling factor that tells javascript how fast it should animate our simulation
+    
+    function update()
+    {
+        if(run)
+        {
+            T+=animationSpeed.value*secondsPassed;
+            X=speed.value*Math.cos(angle.value*Math.PI/180)*T+X0;
+            Y=-0.5*g*T*T+speed.value*Math.sin(angle.value*Math.PI/180)*T+Y0;
+            if(Y<=0)finished=true;
+        }
+    }
+    function draw()
+    {
+        drawing.clearRect(0,0,canvas.width,canvas.height);
+        drawing.beginPath();
+        var scaling=scale.value;//scaling factor to map the meter space to the pixel space, it can be increased to 500, for example, to see shorter range projectiles more spread over the canvas space, or it can be decreased to 1 to see longer range projectiles confined inside the canvas space. Shorter range projectiles have lower initial velocities than projectiles that reach a longer range 
+        X_drawing=X*scaling; Y_drawing=Y*scaling; 
+        drawing.arc(X_drawing,(canvas.height-Y_drawing),5,0,2*Math.PI);//the coordinate system of the canvas starts from the upper left corner (0,0) and increase in Y downwards to reach the canvas height at the lower left corner, so I subtracted the Y coordinate from the canvas height to invert the canvas coordinate to the standard coordinate familiar to the users
+        drawing.fill();
+        drawing.font = '20px serif';
+        drawing.fillText("Position in X: "+X.toFixed(0),50,80);
+        drawing.fillText("Position in Y: "+Y.toFixed(0),50,100);
+    }
+    function resetValues(){
+        X=X0;
+        Y=Y0;
+        T=0;
+        //reset the sliding bars
+        angle.value=45;
+        speed.value=50;
+        scale.value=5;
+        animationSpeed.value=1;
+        //update labels to reflect the reset values
+        updateLabels();
+    }
+    function toggle(){
+        if(!run)
+        {
+            //if the user launced the simulation then switch the button value to "Reset"
+            launch.value="Reset";
+        }
+        else
+        {
+            //else if the user clicked "Reset", then reset the values and swtich the button value to "Launch"
+            launch.value="Launch";
+            resetValues();
+            init();//loads the animation again
+        }
+        run =!run;
+    }
+    function EndSimulation(){
+        drawing.clearRect(0,0,canvas.width,canvas.height);
+        drawing.font = '20px serif';
+        var xDistance=(speed.value*speed.value*Math.sin(2*angle.value*Math.PI/180))/g;
+        var yDistance=(speed.value*speed.value*Math.sin(angle.value*Math.PI/180)*Math.sin(angle.value*Math.PI/180))/(2*g);
+        var tripTime=2*speed.value*Math.sin(angle.value*Math.PI/180)/g;
+        drawing.fillText(`- Total distance covered in X direction (range of the projectile) = Displacement in X direction = ${xDistance.toFixed(2)} m`,50,80);
+        drawing.fillText(`- Maximum height in Y direction (at which the projectile stops momentarily and falls downwards) = ${yDistance.toFixed(2)} m`,50,100);
+        drawing.fillText(`- Total distance covered in Y direction = Twice the maximum height in Y direction = ${(2*yDistance).toFixed(2)} m`,50,120);
+        drawing.fillText("- Displacement in Y direction  = 0 (as the projectile returns to the same initial Y position on earth)",50,140);
+        drawing.fillText(`- Total trip time = ${tripTime.toFixed(2)} sec`,50,160);
+
+        drawing.font = '50px serif';
+        drawing.fillText("Simulation ended!",100,250);
+        drawing.fillText("Press Reset and try new values",100,300);
+        finished=false;
+    }
+
+    function init()
+    {
+        window.requestAnimationFrame(animationLoop);//The callback method (animationLoop) is passed a single argument, a DOMHighResTimeStamp, which indicates the current time (based on the number of milliseconds since time origin).
+    }
+    //every time this function is called, it calls itself again (recursive)
+    function animationLoop(timeStamp)//The callback method (animationLoop) is passed a single argument, a DOMHighResTimeStamp, which indicates the current time (based on the number of milliseconds since time origin).
+    {
+        if(!finished){
+            //the time is in millisec, we have to divide by 1000 to convert it to seconds
+            secondsPassed=(timeStamp-oldTimeStamp)/1000;
+            oldTimeStamp=timeStamp;
+            update();
+            draw();
+            window.requestAnimationFrame(animationLoop);
+        }
+        else{
+            EndSimulation();
+            
+        }
+        
+    }
+    
+    //whenever the window is loaded, this init function is called
+    window.onload=init();//loads the simulation
+    
+</script>  
+</html>
